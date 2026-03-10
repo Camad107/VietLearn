@@ -142,6 +142,7 @@ async def ocr_upload(file: UploadFile = File(...)):
         "entries": result.get("entries", []),
         "method": result.get("method", "unknown"),
         "pages": result.get("pages", 0),
+        "debug_raw": result.get("debug_raw", ""),
     }
 
 

@@ -322,7 +322,7 @@ async function processUpload(file) {
         const res = await fetch(BASE + "/api/ocr", { method: "POST", body: form });
         const data = await res.json();
 
-        document.getElementById("ocr-raw").value = data.raw_text;
+        document.getElementById("ocr-raw").value = data.debug_raw || data.raw_text;
         let methodLabel = data.method === "ai" ? "Claude IA" : "OCR Tesseract (fallback)";
         if (data.pages > 1) methodLabel += ` (${data.pages} pages)`;
         document.getElementById("ocr-method").textContent = methodLabel;

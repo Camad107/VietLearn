@@ -3,12 +3,14 @@ import tempfile
 import os
 import json
 import re
-import glob as globmod
+import logging
 
+logger = logging.getLogger("vietlearn.ocr")
 
 CLAUDE_PATH = "/home/claude-user/.local/bin/claude"
+CLAUDE_ENV = {**os.environ, "PATH": "/home/claude-user/.local/bin:" + os.environ.get("PATH", "")}
 
-PROMPT = """Analyse ce document. C'est une lecon ou liste de vocabulaire vietnamien.
+PROMPT = """Analyse ce contenu. C'est une lecon ou liste de vocabulaire vietnamien.
 
 Extrais TOUS les mots et phrases de vocabulaire que tu trouves.
 Pour chaque mot/phrase, donne la traduction francaise.
@@ -29,155 +31,194 @@ Si tu vois des phrases completes, inclus-les aussi.
 Si tu vois des tons ou de la phonetique, inclus-les dans le champ vietnamese.
 Extrais TOUT ce qui est pertinent pour apprendre le vietnamien."""
 
-
-DOCUMENT_EXTENSIONS = {".doc", ".docx", ".odt", ".rtf", ".ppt", ".pptx", ".xls", ".xlsx"}
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".tif"}
+TEXT_DOC_EXTENSIONS = {".doc", ".docx", ".odt", ".rtf", ".ppt", ".pptx", ".xls", ".xlsx", ".pdf", ".txt"}
 
 
 def extract_vocab_with_ai(file_bytes: bytes, filename: str) -> dict:
-    """Analyze an image, PDF or document and extract Vietnamese vocabulary."""
-    suffix = os.path.splitext(filename)[1].lower() or ".png"
+    """Analyze any file and extract Vietnamese vocabulary using Claude."""
+    suffix = os.path.splitext(filename)[1].lower()
 
-    if suffix == ".pdf":
-        return _process_pdf(file_bytes)
-    elif suffix in DOCUMENT_EXTENSIONS:
-        return _process_document(file_bytes, suffix)
-    else:
+    if suffix in IMAGE_EXTENSIONS:
         return _process_image(file_bytes, suffix)
+    elif suffix in TEXT_DOC_EXTENSIONS:
+        return _process_text_document(file_bytes, suffix)
+    else:
+        return _error("Format non supporte: " + suffix)
 
+
+# --- Images: send directly to Claude (native vision) ---
 
 def _process_image(image_bytes: bytes, suffix: str) -> dict:
-    """Process a single image with Claude."""
+    """Send image directly to Claude — he has native vision."""
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         tmp.write(image_bytes)
         tmp_path = tmp.name
 
     try:
-        return _call_claude([tmp_path])
+        return _call_claude_with_image(tmp_path)
     finally:
         _safe_delete(tmp_path)
 
 
-def _process_document(file_bytes: bytes, suffix: str) -> dict:
-    """Convert doc/docx/odt/etc to PDF via LibreOffice, then process as PDF."""
-    tmpdir = tempfile.mkdtemp(prefix="vietlearn_doc_")
-    doc_path = os.path.join(tmpdir, "input" + suffix)
+def _call_claude_with_image(image_path: str) -> dict:
+    """Call Claude CLI with an image file."""
+    cmd = [CLAUDE_PATH, "--print", PROMPT, image_path]
+    return _run_claude(cmd)
 
-    with open(doc_path, "wb") as f:
-        f.write(file_bytes)
+
+# --- Documents: extract text, then send to Claude ---
+
+def _process_text_document(file_bytes: bytes, suffix: str) -> dict:
+    """Extract text from document, then send to Claude for analysis."""
+    text = _extract_text(file_bytes, suffix)
+
+    if not text or not text.strip():
+        return _error(f"Aucun texte extrait du fichier {suffix}")
+
+    logger.info("Extracted %d chars from %s", len(text), suffix)
+    return _call_claude_with_text(text)
+
+
+def _extract_text(file_bytes: bytes, suffix: str) -> str:
+    """Extract raw text from various document formats."""
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp.write(file_bytes)
+        tmp_path = tmp.name
 
     try:
+        if suffix == ".pdf":
+            return _text_from_pdf(tmp_path)
+        elif suffix in (".docx", ".doc"):
+            return _text_from_docx(tmp_path)
+        elif suffix in (".pptx", ".ppt"):
+            return _text_from_pptx(tmp_path)
+        elif suffix in (".xlsx", ".xls"):
+            return _text_from_xlsx(tmp_path)
+        elif suffix == ".txt":
+            return file_bytes.decode("utf-8", errors="replace")
+        elif suffix in (".odt", ".rtf"):
+            return _text_from_libreoffice(tmp_path)
+        else:
+            return ""
+    finally:
+        _safe_delete(tmp_path)
+
+
+def _text_from_pdf(path: str) -> str:
+    from PyPDF2 import PdfReader
+    reader = PdfReader(path)
+    pages = []
+    for i, page in enumerate(reader.pages):
+        text = page.extract_text() or ""
+        if text.strip():
+            pages.append(f"--- Page {i+1} ---\n{text}")
+    return "\n\n".join(pages)
+
+
+def _text_from_docx(path: str) -> str:
+    from docx import Document
+    doc = Document(path)
+    return "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+
+
+def _text_from_pptx(path: str) -> str:
+    from pptx import Presentation
+    prs = Presentation(path)
+    lines = []
+    for i, slide in enumerate(prs.slides):
+        lines.append(f"--- Slide {i+1} ---")
+        for shape in slide.shapes:
+            if shape.has_text_frame:
+                for para in shape.text_frame.paragraphs:
+                    if para.text.strip():
+                        lines.append(para.text)
+    return "\n".join(lines)
+
+
+def _text_from_xlsx(path: str) -> str:
+    from openpyxl import load_workbook
+    wb = load_workbook(path, read_only=True)
+    lines = []
+    for sheet in wb.sheetnames:
+        ws = wb[sheet]
+        lines.append(f"--- {sheet} ---")
+        for row in ws.iter_rows(values_only=True):
+            cells = [str(c) for c in row if c is not None]
+            if cells:
+                lines.append("\t".join(cells))
+    return "\n".join(lines)
+
+
+def _text_from_libreoffice(path: str) -> str:
+    """Convert ODT/RTF to text via LibreOffice."""
+    tmpdir = tempfile.mkdtemp(prefix="vietlearn_lo_")
+    try:
         subprocess.run(
-            ["libreoffice", "--headless", "--convert-to", "pdf",
-             "--outdir", tmpdir, doc_path],
-            capture_output=True, timeout=60,
+            ["libreoffice", "--headless", "--convert-to", "txt:Text", "--outdir", tmpdir, path],
+            capture_output=True, timeout=30,
             env={**os.environ, "HOME": tmpdir}
         )
-
-        pdf_path = os.path.join(tmpdir, "input.pdf")
-        if not os.path.exists(pdf_path):
-            return {
-                "raw_text": "",
-                "entries": [],
-                "description": f"Echec de conversion {suffix} → PDF",
-                "method": "error",
-                "pages": 0,
-            }
-
-        with open(pdf_path, "rb") as f:
-            pdf_bytes = f.read()
-
-        return _process_pdf(pdf_bytes)
-
+        txt_files = [f for f in os.listdir(tmpdir) if f.endswith(".txt")]
+        if txt_files:
+            with open(os.path.join(tmpdir, txt_files[0]), "r", errors="replace") as f:
+                return f.read()
+        return ""
     finally:
-        for f in globmod.glob(os.path.join(tmpdir, "*")):
-            _safe_delete(f)
+        for f in os.listdir(tmpdir):
+            _safe_delete(os.path.join(tmpdir, f))
         try:
             os.rmdir(tmpdir)
         except OSError:
             pass
 
 
-def _process_pdf(pdf_bytes: bytes) -> dict:
-    """Convert PDF pages to images, then process each with Claude."""
-    tmpdir = tempfile.mkdtemp(prefix="vietlearn_pdf_")
-    pdf_path = os.path.join(tmpdir, "input.pdf")
+def _call_claude_with_text(text: str) -> dict:
+    """Call Claude CLI with text content via stdin."""
+    full_prompt = PROMPT + "\n\nVoici le contenu du document:\n\n" + text
+    cmd = [CLAUDE_PATH, "--print", full_prompt]
+    return _run_claude(cmd)
 
-    with open(pdf_path, "wb") as f:
-        f.write(pdf_bytes)
 
+# --- Common ---
+
+def _run_claude(cmd: list[str]) -> dict:
+    """Execute Claude CLI and parse response."""
     try:
-        # Convert PDF to images (150 DPI, good enough for text)
-        subprocess.run(
-            ["pdftoppm", "-png", "-r", "150", pdf_path, os.path.join(tmpdir, "page")],
-            capture_output=True, timeout=60
-        )
-
-        page_images = sorted(globmod.glob(os.path.join(tmpdir, "page-*.png")))
-
-        if not page_images:
-            return {
-                "raw_text": "",
-                "entries": [],
-                "description": "Aucune page extraite du PDF",
-                "method": "error",
-                "pages": 0,
-            }
-
-        # Send all page images to Claude in one call
-        return _call_claude(page_images, page_count=len(page_images))
-
-    finally:
-        # Cleanup temp dir
-        for f in globmod.glob(os.path.join(tmpdir, "*")):
-            _safe_delete(f)
-        try:
-            os.rmdir(tmpdir)
-        except OSError:
-            pass
-
-
-def _call_claude(image_paths: list[str], page_count: int = 1) -> dict:
-    """Call Claude CLI with one or more images."""
-    cmd = [CLAUDE_PATH, "--print", PROMPT] + image_paths
-
-    try:
+        logger.info("Running: %s", " ".join(cmd[:3]) + " ...")
         result = subprocess.run(
-            cmd,
-            capture_output=True, text=True,
-            timeout=180,
-            env={**os.environ, "PATH": "/home/claude-user/.local/bin:" + os.environ.get("PATH", "")}
+            cmd, capture_output=True, text=True,
+            timeout=180, env=CLAUDE_ENV
         )
 
-        raw_output = result.stdout.strip()
-        parsed = _parse_ai_response(raw_output)
+        raw = result.stdout.strip()
+        stderr = result.stderr.strip()
+
+        logger.info("Claude returned %d chars (exit %d)", len(raw), result.returncode)
+        if stderr:
+            logger.warning("Claude stderr: %s", stderr[:300])
+
+        parsed = _parse_json(raw)
 
         return {
-            "raw_text": parsed.get("description", raw_output[:500]),
             "entries": parsed.get("entries", []),
             "description": parsed.get("description", ""),
             "method": "ai",
-            "pages": page_count,
+            "pages": 0,
+            "debug_raw": raw[:2000],
         }
+
     except subprocess.TimeoutExpired:
-        return {
-            "raw_text": "",
-            "entries": [],
-            "description": "Timeout - le fichier est trop gros",
-            "method": "error",
-            "pages": page_count,
-        }
+        logger.error("Claude timeout")
+        return _error("Timeout — fichier trop volumineux")
     except Exception as e:
-        return {
-            "raw_text": str(e),
-            "entries": [],
-            "description": f"Erreur: {e}",
-            "method": "error",
-            "pages": page_count,
-        }
+        logger.error("Claude error: %s", e)
+        return _error(str(e))
 
 
-def _parse_ai_response(text: str) -> dict:
+def _parse_json(text: str) -> dict:
     """Parse JSON from Claude's response."""
+    # Strip markdown fences
     text = re.sub(r'^```json\s*', '', text, flags=re.MULTILINE)
     text = re.sub(r'^```\s*$', '', text, flags=re.MULTILINE)
     text = text.strip()
@@ -187,6 +228,7 @@ def _parse_ai_response(text: str) -> dict:
     except json.JSONDecodeError:
         pass
 
+    # Find JSON object in text
     match = re.search(r'\{[\s\S]*\}', text)
     if match:
         try:
@@ -194,7 +236,18 @@ def _parse_ai_response(text: str) -> dict:
         except json.JSONDecodeError:
             pass
 
-    return {"entries": [], "description": "Erreur de parsing"}
+    logger.error("JSON parse failed. Raw: %s", text[:500])
+    return {"entries": [], "description": "Erreur de parsing IA"}
+
+
+def _error(msg: str) -> dict:
+    return {
+        "entries": [],
+        "description": msg,
+        "method": "error",
+        "pages": 0,
+        "debug_raw": msg,
+    }
 
 
 def _safe_delete(path: str):
