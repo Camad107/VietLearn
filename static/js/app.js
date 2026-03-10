@@ -201,8 +201,8 @@ function showFlashcard() {
     }
     const card = flashcardDeck[flashcardIndex];
     currentVietnameseWord = card.vietnamese;
-    document.getElementById("flash-front-word").textContent = card.vietnamese;
-    document.getElementById("flash-back-word").textContent = card.french;
+    document.getElementById("flash-front-word").textContent = card.french;
+    document.getElementById("flash-back-word").textContent = card.vietnamese;
     document.getElementById("flash-back-hint").textContent = card.category || "";
     document.getElementById("flash-progress").textContent = `${flashcardIndex + 1} / ${flashcardDeck.length}`;
     document.getElementById("flashcard").classList.remove("flipped");

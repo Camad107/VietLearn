@@ -306,13 +306,13 @@ select { cursor: pointer; }
     text-align: center;
 }
 .flashcard-front {
-    background: linear-gradient(145deg, #6366f1, #7c3aed);
-    box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
+    background: linear-gradient(145deg, #f59e0b, #d97706);
+    box-shadow: 0 8px 32px rgba(245, 158, 11, 0.3);
 }
 .flashcard-back {
-    background: linear-gradient(145deg, #f59e0b, #d97706);
+    background: linear-gradient(145deg, #6366f1, #7c3aed);
     transform: rotateY(180deg);
-    box-shadow: 0 8px 32px rgba(245, 158, 11, 0.3);
+    box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
 }
 .flashcard-face .word {
     font-size: 1.8rem;
