@@ -7,7 +7,7 @@ import json
 
 from version import VERSION, VERSION_NAME
 from database import get_db, init_db
-from ocr import extract_text_from_image, parse_vocabulary_lines
+from ocr import extract_vocab_with_ai
 
 app = FastAPI(title="VietLearn", version=VERSION)
 
@@ -135,10 +135,13 @@ async def ocr_upload(file: UploadFile = File(...)):
     if len(contents) > 10 * 1024 * 1024:
         raise HTTPException(400, "File too large (max 10MB)")
 
-    raw_text = extract_text_from_image(contents, file.filename)
-    entries = parse_vocabulary_lines(raw_text)
+    result = extract_vocab_with_ai(contents, file.filename)
 
-    return {"raw_text": raw_text, "entries": entries}
+    return {
+        "raw_text": result.get("description", ""),
+        "entries": result.get("entries", []),
+        "method": result.get("method", "unknown"),
+    }
 
 
 # --- API: Categories ---

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VietLearn - Apprends le Vietnamien</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="static/css/style.css">
 </head>
 <body>
 
@@ -159,12 +159,15 @@
 
             <div id="upload-loading" style="display:none;text-align:center;padding:2rem;">
                 <div class="loading"></div>
-                <p style="margin-top:1rem;color:var(--text-muted);">Analyse en cours...</p>
+                <p id="upload-loading-text" style="margin-top:1rem;color:var(--text-muted);">Analyse IA en cours...</p>
             </div>
 
             <div class="ocr-preview" id="ocr-preview">
-                <h2>Texte brut detecte</h2>
-                <textarea id="ocr-raw" rows="4" readonly style="margin-bottom:1rem;"></textarea>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <h2>Resultat</h2>
+                    <span id="ocr-method" style="font-size:0.8rem;background:var(--primary);color:white;padding:0.2rem 0.6rem;border-radius:99px;"></span>
+                </div>
+                <textarea id="ocr-raw" rows="3" readonly style="margin:0.5rem 0 1rem;"></textarea>
 
                 <h2>Vocabulaire detecte</h2>
                 <div id="ocr-entries"></div>
@@ -220,6 +223,6 @@
 <div class="version-badge" id="version-badge"></div>
 <div class="toast" id="toast"></div>
 
-<script src="/static/js/app.js"></script>
+<script src="static/js/app.js"></script>
 </body>
 </html>

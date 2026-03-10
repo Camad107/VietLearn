@@ -1,3 +1,7 @@
+// ==================== BASE PATH ====================
+// Auto-detect base path from current URL
+const BASE = window.location.pathname.replace(/\/$/, "");
+
 // ==================== STATE ====================
 let vocabList = [];
 let flashcardDeck = [];
@@ -30,7 +34,7 @@ function showPage(name) {
 
 // ==================== VERSION ====================
 async function loadVersion() {
-    const res = await fetch("/api/version");
+    const res = await fetch(BASE + "/api/version");
     const data = await res.json();
     document.getElementById("version-badge").textContent = `${data.name} v${data.version}`;
 }
@@ -51,7 +55,7 @@ async function loadVocab() {
     if (cat) params.set("category", cat);
     if (search) params.set("search", search);
 
-    const res = await fetch("/api/vocab?" + params);
+    const res = await fetch(BASE + "/api/vocab?" + params);
     vocabList = await res.json();
     renderVocabList();
 }
@@ -88,7 +92,7 @@ async function addVocab(e) {
     form.set("french", document.getElementById("input-french").value);
     form.set("category", document.getElementById("input-category").value);
 
-    await fetch("/api/vocab", { method: "POST", body: form });
+    await fetch(BASE + "/api/vocab", { method: "POST", body: form });
     document.getElementById("input-viet").value = "";
     document.getElementById("input-french").value = "";
     toast("Mot ajoute !");
@@ -98,14 +102,14 @@ async function addVocab(e) {
 
 async function deleteVocab(id) {
     if (!confirm("Supprimer ce mot ?")) return;
-    await fetch(`/api/vocab/${id}`, { method: "DELETE" });
+    await fetch(`${BASE}/api/vocab/${id}`, { method: "DELETE" });
     toast("Supprime");
     loadVocab();
 }
 
 // ==================== CATEGORIES ====================
 async function loadCategories() {
-    const res = await fetch("/api/categories");
+    const res = await fetch(BASE + "/api/categories");
     const cats = await res.json();
     const selectors = ["filter-category", "flash-category", "quiz-category"];
     selectors.forEach(id => {
@@ -143,7 +147,7 @@ speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
 async function startFlashcards() {
     const cat = document.getElementById("flash-category").value;
     const params = cat ? `?category=${encodeURIComponent(cat)}` : "";
-    const res = await fetch("/api/review" + params);
+    const res = await fetch(BASE + "/api/review" + params);
     flashcardDeck = await res.json();
     flashcardIndex = 0;
 
@@ -184,7 +188,7 @@ function flipCard() {
 
 async function reviewCard(correct) {
     const card = flashcardDeck[flashcardIndex];
-    await fetch(`/api/review/${card.id}`, {
+    await fetch(`${BASE}/api/review/${card.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ correct })
@@ -197,7 +201,7 @@ async function reviewCard(correct) {
 async function startQuiz() {
     const cat = document.getElementById("quiz-category").value;
     const params = cat ? `?category=${encodeURIComponent(cat)}&limit=50` : "?limit=50";
-    const res = await fetch("/api/review" + params);
+    const res = await fetch(BASE + "/api/review" + params);
     const allCards = await res.json();
 
     document.getElementById("quiz-result").style.display = "none";
@@ -272,7 +276,7 @@ function answerQuiz(btn, correct) {
 
     // Submit review
     const card = quizDeck[quizIndex];
-    fetch(`/api/review/${card.id}`, {
+    fetch(`${BASE}/api/review/${card.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ correct: isCorrect })
@@ -282,7 +286,7 @@ function answerQuiz(btn, correct) {
     setTimeout(() => {
         quizIndex++;
         // Re-fetch all cards for options pool
-        fetch("/api/review?limit=50").then(r => r.json()).then(allCards => {
+        fetch(BASE + "/api/review?limit=50").then(r => r.json()).then(allCards => {
             if (allCards.length < 4) allCards = vocabList; // fallback
             showQuizQuestion(allCards);
         });
@@ -309,19 +313,21 @@ function handleUpload(e) {
 async function processUpload(file) {
     document.getElementById("upload-loading").style.display = "block";
     document.getElementById("ocr-preview").classList.remove("visible");
+    document.getElementById("upload-loading-text").textContent = "Analyse IA en cours...";
 
     const form = new FormData();
     form.append("file", file);
 
     try {
-        const res = await fetch("/api/ocr", { method: "POST", body: form });
+        const res = await fetch(BASE + "/api/ocr", { method: "POST", body: form });
         const data = await res.json();
 
         document.getElementById("ocr-raw").value = data.raw_text;
+        document.getElementById("ocr-method").textContent = data.method === "ai" ? "Claude IA" : "OCR Tesseract (fallback)";
         renderOcrEntries(data.entries);
         document.getElementById("ocr-preview").classList.add("visible");
     } catch (err) {
-        toast("Erreur OCR: " + err.message);
+        toast("Erreur: " + err.message);
     }
     document.getElementById("upload-loading").style.display = "none";
 }
@@ -337,8 +343,9 @@ function renderOcrEntries(entries) {
     }
     container.innerHTML = entries.map((e, i) => `
         <div class="ocr-entry">
-            <input type="text" value="${esc(e.vietnamese)}" onchange="ocrEntries[${i}].vietnamese=this.value">
-            <input type="text" value="${esc(e.french)}" onchange="ocrEntries[${i}].french=this.value">
+            <input type="text" value="${esc(e.vietnamese)}" onchange="ocrEntries[${i}].vietnamese=this.value" placeholder="Vietnamien">
+            <input type="text" value="${esc(e.french)}" onchange="ocrEntries[${i}].french=this.value" placeholder="Francais">
+            <input type="text" value="${esc(e.category || '')}" onchange="ocrEntries[${i}].category=this.value" placeholder="Categorie" style="max-width:120px;">
             <button class="btn-icon" onclick="this.parentElement.remove();ocrEntries[${i}]=null;">
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
             </button>
@@ -350,7 +357,7 @@ async function importOcrEntries() {
     const valid = ocrEntries.filter(e => e && e.vietnamese && e.french);
     if (!valid.length) { toast("Rien a importer"); return; }
 
-    await fetch("/api/vocab/bulk", {
+    await fetch(BASE + "/api/vocab/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ entries: valid })
@@ -387,7 +394,7 @@ async function importManualText() {
 
     if (!entries.length) { toast("Aucune paire detectee"); return; }
 
-    await fetch("/api/vocab/bulk", {
+    await fetch(BASE + "/api/vocab/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ entries })
@@ -400,7 +407,7 @@ async function importManualText() {
 
 // ==================== STATS ====================
 async function loadStats() {
-    const res = await fetch("/api/stats");
+    const res = await fetch(BASE + "/api/stats");
     const data = await res.json();
 
     document.getElementById("stat-total").textContent = data.total_vocab;
