@@ -156,7 +156,7 @@ async def ocr_upload(file: UploadFile = File(...)):
 def list_categories():
     db = get_db()
     rows = db.execute(
-        "SELECT DISTINCT category FROM vocabulary WHERE category != '' ORDER BY category"
+        "SELECT category, MIN(id) as first_id FROM vocabulary WHERE category != '' GROUP BY category ORDER BY first_id"
     ).fetchall()
     db.close()
     return [r["category"] for r in rows]
