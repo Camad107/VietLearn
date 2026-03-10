@@ -70,14 +70,88 @@ def _call_claude_with_image(image_path: str) -> dict:
 # --- Documents: extract text, then send to Claude ---
 
 def _process_text_document(file_bytes: bytes, suffix: str) -> dict:
-    """Extract text from document, then send to Claude for analysis."""
+    """Extract text from document, split into chunks, process each with Claude."""
     text = _extract_text(file_bytes, suffix)
 
     if not text or not text.strip():
         return _error(f"Aucun texte extrait du fichier {suffix}")
 
     logger.info("Extracted %d chars from %s", len(text), suffix)
-    return _call_claude_with_text(text)
+
+    # Split into chunks by page markers or by size
+    chunks = _split_into_chunks(text, max_chars=3000)
+    logger.info("Split into %d chunks", len(chunks))
+
+    all_entries = []
+    descriptions = []
+
+    for i, chunk in enumerate(chunks):
+        logger.info("Processing chunk %d/%d (%d chars)", i + 1, len(chunks), len(chunk))
+        result = _call_claude_with_text(chunk)
+        entries = result.get("entries", [])
+        all_entries.extend(entries)
+        desc = result.get("description", "")
+        if desc:
+            descriptions.append(desc)
+        logger.info("Chunk %d: %d entries", i + 1, len(entries))
+
+    # Deduplicate by vietnamese text
+    seen = set()
+    unique_entries = []
+    for e in all_entries:
+        key = e.get("vietnamese", "").strip().lower()
+        if key and key not in seen:
+            seen.add(key)
+            unique_entries.append(e)
+
+    logger.info("Total: %d entries (%d unique)", len(all_entries), len(unique_entries))
+
+    return {
+        "entries": unique_entries,
+        "description": " | ".join(descriptions) if descriptions else "",
+        "method": "ai",
+        "pages": len(chunks),
+        "debug_raw": f"{len(chunks)} chunks, {len(unique_entries)} mots extraits",
+    }
+
+
+def _split_into_chunks(text: str, max_chars: int = 3000) -> list[str]:
+    """Split text into chunks, respecting page markers or paragraph breaks."""
+    # First try splitting by page markers
+    pages = re.split(r'---\s*(?:Page|Slide)\s+\d+\s*---', text)
+    pages = [p.strip() for p in pages if p.strip()]
+
+    if len(pages) > 1:
+        # Merge small pages together up to max_chars
+        chunks = []
+        current = ""
+        for page in pages:
+            if len(current) + len(page) > max_chars and current:
+                chunks.append(current)
+                current = page
+            else:
+                current = (current + "\n\n" + page).strip()
+        if current:
+            chunks.append(current)
+        return chunks
+
+    # No page markers: split by paragraphs
+    if len(text) <= max_chars:
+        return [text]
+
+    chunks = []
+    paragraphs = text.split("\n")
+    current = ""
+    for para in paragraphs:
+        if len(current) + len(para) > max_chars and current:
+            chunks.append(current)
+            current = para
+        else:
+            current = (current + "\n" + para).strip()
+    if current:
+        chunks.append(current)
+
+    return chunks if chunks else [text]
 
 
 def _extract_text(file_bytes: bytes, suffix: str) -> str:
