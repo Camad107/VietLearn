@@ -22,7 +22,7 @@
         <button class="active" onclick="showPage('vocab', this)">Vocabulaire</button>
         <button onclick="showPage('flashcards', this)">Flashcards</button>
         <button onclick="showPage('quiz', this)">Quiz</button>
-        <button onclick="showPage('upload', this)">Upload</button>
+        <button onclick="showPage('add', this)">Ajouter</button>
         <button onclick="showPage('stats', this)">Stats</button>
     </div>
 </nav>
@@ -31,31 +31,6 @@
 
     <!-- ==================== VOCABULAIRE ==================== -->
     <div id="page-vocab" class="page active">
-        <div class="card">
-            <h2>Ajouter du vocabulaire</h2>
-            <form id="add-form" onsubmit="addVocab(event)">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Vietnamien</label>
-                        <input type="text" id="input-viet" placeholder="Xin chao" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Francais</label>
-                        <input type="text" id="input-french" placeholder="Bonjour" required>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Categorie</label>
-                        <input type="text" id="input-category" placeholder="Salutations">
-                    </div>
-                    <div class="form-group" style="display:flex;align-items:flex-end;">
-                        <button type="submit" class="btn btn-primary" style="width:100%">Ajouter</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-
         <div class="card">
             <div class="card-header">
                 <h2>Ma liste</h2>
@@ -156,10 +131,35 @@
         </div>
     </div>
 
-    <!-- ==================== UPLOAD ==================== -->
-    <div id="page-upload" class="page">
+    <!-- ==================== AJOUTER ==================== -->
+    <div id="page-add" class="page">
         <div class="card">
-            <h2>Importer du vocabulaire</h2>
+            <h2>Ajouter un mot</h2>
+            <form id="add-form" onsubmit="addVocab(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Vietnamien</label>
+                        <input type="text" id="input-viet" placeholder="Xin chao" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Francais</label>
+                        <input type="text" id="input-french" placeholder="Bonjour" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Categorie</label>
+                        <input type="text" id="input-category" placeholder="Salutations">
+                    </div>
+                    <div class="form-group" style="display:flex;align-items:flex-end;">
+                        <button type="submit" class="btn btn-primary" style="width:100%">Ajouter</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Importer un fichier (IA)</h2>
             <p style="color:var(--text-muted);margin-bottom:1rem;font-size:0.85rem;">
                 Upload une photo, PDF, Word ou tout document de ta lecon.
                 L'IA analyse et extrait tout le vocabulaire automatiquement.
