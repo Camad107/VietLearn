@@ -52,7 +52,7 @@ def list_vocab(category: str = "", search: str = ""):
     if search:
         query += " AND (vietnamese LIKE ? OR french LIKE ?)"
         params.extend([f"%{search}%", f"%{search}%"])
-    query += " ORDER BY created_at DESC"
+    query += " ORDER BY id ASC"
     rows = db.execute(query, params).fetchall()
     db.close()
     return [dict(r) for r in rows]
