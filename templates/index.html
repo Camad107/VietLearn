@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VietLearn - Apprends le Vietnamien</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+    <div class="nav-brand">VietLearn</div>
+    <div class="nav-links">
+        <button class="active" onclick="showPage('vocab')">Vocabulaire</button>
+        <button onclick="showPage('flashcards')">Flashcards</button>
+        <button onclick="showPage('quiz')">Quiz</button>
+        <button onclick="showPage('upload')">Upload</button>
+        <button onclick="showPage('stats')">Stats</button>
+    </div>
+</nav>
+
+<main class="main">
+
+    <!-- ==================== VOCABULAIRE ==================== -->
+    <div id="page-vocab" class="page active">
+        <div class="card">
+            <h2>Ajouter du vocabulaire</h2>
+            <form id="add-form" onsubmit="addVocab(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Vietnamien</label>
+                        <input type="text" id="input-viet" placeholder="Xin chao" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Francais</label>
+                        <input type="text" id="input-french" placeholder="Bonjour" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Categorie</label>
+                        <input type="text" id="input-category" placeholder="Salutations">
+                    </div>
+                    <div class="form-group" style="display:flex;align-items:flex-end;">
+                        <button type="submit" class="btn btn-primary" style="width:100%">Ajouter</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <h2 style="margin:0">Ma liste</h2>
+                <div style="display:flex;gap:0.5rem;">
+                    <select id="filter-category" onchange="loadVocab()" style="width:auto;">
+                        <option value="">Toutes categories</option>
+                    </select>
+                    <input type="text" id="search-input" placeholder="Rechercher..."
+                           oninput="loadVocab()" style="width:200px;">
+                </div>
+            </div>
+            <div id="vocab-list"></div>
+        </div>
+    </div>
+
+    <!-- ==================== FLASHCARDS ==================== -->
+    <div id="page-flashcards" class="page">
+        <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <h2 style="margin:0">Flashcards</h2>
+                <select id="flash-category" onchange="startFlashcards()" style="width:auto;">
+                    <option value="">Toutes categories</option>
+                </select>
+            </div>
+
+            <div id="flashcard-area">
+                <div class="flashcard-progress" id="flash-progress"></div>
+                <div class="flashcard-container">
+                    <div class="flashcard" id="flashcard" onclick="flipCard()">
+                        <div class="flashcard-face flashcard-front">
+                            <div class="word" id="flash-front-word"></div>
+                            <div class="hint">Clique pour retourner</div>
+                        </div>
+                        <div class="flashcard-face flashcard-back">
+                            <div class="word" id="flash-back-word"></div>
+                            <div class="hint" id="flash-back-hint"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flashcard-controls">
+                    <button class="btn btn-danger" onclick="reviewCard(false)">Je ne sais pas</button>
+                    <button class="btn btn-icon" onclick="speakVietnamese()" title="Ecouter">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                    </button>
+                    <button class="btn btn-success" onclick="reviewCard(true)">Je sais !</button>
+                </div>
+            </div>
+            <div id="flashcard-empty" class="empty-state" style="display:none;">
+                <div class="icon">&#x1F4DA;</div>
+                <p>Ajoute du vocabulaire pour commencer</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== QUIZ ==================== -->
+    <div id="page-quiz" class="page">
+        <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <h2 style="margin:0">Quiz</h2>
+                <div style="display:flex;gap:0.5rem;align-items:center;">
+                    <select id="quiz-direction" onchange="startQuiz()" style="width:auto;">
+                        <option value="viet-to-fr">Viet → Francais</option>
+                        <option value="fr-to-viet">Francais → Viet</option>
+                    </select>
+                    <select id="quiz-category" onchange="startQuiz()" style="width:auto;">
+                        <option value="">Toutes categories</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="quiz-area">
+                <div class="flashcard-progress" id="quiz-progress"></div>
+                <div class="quiz-question" id="quiz-question"></div>
+                <div class="quiz-options" id="quiz-options"></div>
+                <div style="text-align:center;margin-top:1.5rem;">
+                    <button class="btn btn-icon" onclick="speakVietnamese()" title="Ecouter" id="quiz-speak-btn">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div id="quiz-empty" class="empty-state" style="display:none;">
+                <div class="icon">&#x1F4DD;</div>
+                <p>Il faut au moins 4 mots pour lancer le quiz</p>
+            </div>
+            <div id="quiz-result" class="empty-state" style="display:none;">
+                <div class="icon">&#x1F389;</div>
+                <p id="quiz-result-text"></p>
+                <button class="btn btn-primary" onclick="startQuiz()" style="margin-top:1rem;">Recommencer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== UPLOAD / OCR ==================== -->
+    <div id="page-upload" class="page">
+        <div class="card">
+            <h2>Importer du vocabulaire</h2>
+            <p style="color:var(--text-muted);margin-bottom:1rem;font-size:0.9rem;">
+                Upload une photo de ta liste de vocabulaire. L'OCR va extraire le texte
+                et detecter les paires vietnamien/francais.
+            </p>
+            <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+                <input type="file" id="file-input" accept="image/*" onchange="handleUpload(event)">
+                <div class="icon" style="font-size:2rem;">&#x1F4F7;</div>
+                <p>Clique ou glisse une image ici</p>
+                <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">
+                    Formats: JPG, PNG, BMP (max 10 MB)
+                </p>
+            </div>
+
+            <div id="upload-loading" style="display:none;text-align:center;padding:2rem;">
+                <div class="loading"></div>
+                <p style="margin-top:1rem;color:var(--text-muted);">Analyse en cours...</p>
+            </div>
+
+            <div class="ocr-preview" id="ocr-preview">
+                <h2>Texte brut detecte</h2>
+                <textarea id="ocr-raw" rows="4" readonly style="margin-bottom:1rem;"></textarea>
+
+                <h2>Vocabulaire detecte</h2>
+                <div id="ocr-entries"></div>
+                <div style="margin-top:1rem;display:flex;gap:0.5rem;">
+                    <button class="btn btn-primary" onclick="importOcrEntries()">Importer tout</button>
+                    <button class="btn btn-ghost" onclick="resetUpload()">Annuler</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Import manuel (texte)</h2>
+            <p style="color:var(--text-muted);margin-bottom:1rem;font-size:0.9rem;">
+                Colle du texte avec un format : <code>vietnamien = francais</code> ou
+                <code>vietnamien : francais</code> (un par ligne)
+            </p>
+            <textarea id="manual-text" placeholder="xin chao = bonjour&#10;cam on = merci&#10;tam biet = au revoir" rows="6"></textarea>
+            <button class="btn btn-primary" style="margin-top:0.5rem;" onclick="importManualText()">Importer</button>
+        </div>
+    </div>
+
+    <!-- ==================== STATS ==================== -->
+    <div id="page-stats" class="page">
+        <div class="card">
+            <h2>Statistiques</h2>
+            <div class="stat-grid" id="stat-grid">
+                <div class="stat-box">
+                    <div class="number" id="stat-total">0</div>
+                    <div class="label">Mots total</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number" id="stat-reviewed">0</div>
+                    <div class="label">Revises</div>
+                </div>
+                <div class="stat-box">
+                    <div class="number" id="stat-due">0</div>
+                    <div class="label">A reviser</div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <h2>Mieux connus</h2>
+            <div id="stat-top-correct"></div>
+        </div>
+        <div class="card">
+            <h2>A travailler</h2>
+            <div id="stat-top-incorrect"></div>
+        </div>
+    </div>
+
+</main>
+
+<div class="version-badge" id="version-badge"></div>
+<div class="toast" id="toast"></div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
