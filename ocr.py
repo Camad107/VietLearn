@@ -193,7 +193,37 @@ def _text_from_pdf(path: str) -> str:
 def _text_from_docx(path: str) -> str:
     from docx import Document
     doc = Document(path)
-    return "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+    lines = []
+
+    # Iterate through document body in order (paragraphs AND tables)
+    for element in doc.element.body:
+        tag = element.tag.split("}")[-1]
+
+        if tag == "p":
+            # Paragraph
+            text = element.text or ""
+            # Also grab text from runs inside the paragraph
+            for run in element.iter():
+                if run.tag.endswith("}t") and run.text:
+                    pass  # already captured by element.text
+            # Use python-docx paragraph object for clean text
+            for p in doc.paragraphs:
+                if p._element is element and p.text.strip():
+                    lines.append(p.text)
+                    break
+
+        elif tag == "tbl":
+            # Table — extract all rows
+            for table in doc.tables:
+                if table._tbl is element:
+                    for row in table.rows:
+                        cells = [cell.text.strip() for cell in row.cells if cell.text.strip()]
+                        if cells:
+                            lines.append("\t".join(cells))
+                    break
+
+    logger.info("DOCX extraction: %d lines", len(lines))
+    return "\n".join(lines)
 
 
 def _text_from_pptx(path: str) -> str:

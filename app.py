@@ -4,6 +4,10 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from datetime import datetime, timedelta
 import os
 import json
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("vietlearn")
 
 from version import VERSION, VERSION_NAME
 from database import get_db, init_db

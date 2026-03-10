@@ -1,5 +1,4 @@
 // ==================== BASE PATH ====================
-// Auto-detect base path from current URL
 const BASE = window.location.pathname.replace(/\/$/, "");
 
 // ==================== STATE ====================
@@ -20,17 +19,34 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ==================== NAVIGATION ====================
-function showPage(name) {
+function showPage(name, btn) {
     document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
     document.getElementById("page-" + name).classList.add("active");
     document.querySelectorAll(".nav-links button").forEach(b => b.classList.remove("active"));
-    event.target.classList.add("active");
+    if (btn) btn.classList.add("active");
+
+    // Close mobile menu
+    document.getElementById("nav-links").classList.remove("open");
 
     if (name === "flashcards") startFlashcards();
     if (name === "quiz") startQuiz();
     if (name === "stats") loadStats();
     if (name === "vocab") { loadVocab(); loadCategories(); }
 }
+
+function toggleMenu() {
+    const nav = document.getElementById("nav-links");
+    nav.classList.toggle("open");
+}
+
+// Close menu on outside click
+document.addEventListener("click", (e) => {
+    const nav = document.getElementById("nav-links");
+    const hamburger = document.querySelector(".nav-hamburger");
+    if (nav.classList.contains("open") && !nav.contains(e.target) && !hamburger.contains(e.target)) {
+        nav.classList.remove("open");
+    }
+});
 
 // ==================== VERSION ====================
 async function loadVersion() {
@@ -127,7 +143,6 @@ function speak(text) {
     utterance.lang = "vi-VN";
     utterance.rate = 0.8;
 
-    // Try to find Vietnamese voice
     const voices = speechSynthesis.getVoices();
     const viVoice = voices.find(v => v.lang.startsWith("vi"));
     if (viVoice) utterance.voice = viVoice;
@@ -140,7 +155,6 @@ function speakVietnamese() {
     if (currentVietnameseWord) speak(currentVietnameseWord);
 }
 
-// Load voices
 speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
 
 // ==================== FLASHCARDS ====================
@@ -159,7 +173,6 @@ async function startFlashcards() {
     document.getElementById("flashcard-area").style.display = "block";
     document.getElementById("flashcard-empty").style.display = "none";
 
-    // Shuffle
     for (let i = flashcardDeck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [flashcardDeck[i], flashcardDeck[j]] = [flashcardDeck[j], flashcardDeck[i]];
@@ -214,7 +227,6 @@ async function startQuiz() {
     document.getElementById("quiz-area").style.display = "block";
     document.getElementById("quiz-empty").style.display = "none";
 
-    // Pick 10 questions max
     quizDeck = shuffle(allCards).slice(0, 10);
     quizIndex = 0;
     quizScore = 0;
@@ -238,7 +250,6 @@ function showQuizQuestion(allCards) {
     document.getElementById("quiz-progress").textContent = `Question ${quizIndex + 1} / ${quizDeck.length}`;
     document.getElementById("quiz-question").textContent = isVietToFr ? card.vietnamese : card.french;
 
-    // Generate wrong options from pool
     const correctAnswer = isVietToFr ? card.french : card.vietnamese;
     const pool = allCards
         .filter(c => c.id !== card.id)
@@ -253,7 +264,6 @@ function showQuizQuestion(allCards) {
         </button>
     `).join("");
 
-    // Show/hide speak button based on direction
     document.getElementById("quiz-speak-btn").style.display = isVietToFr ? "inline-flex" : "none";
 }
 
@@ -274,7 +284,6 @@ function answerQuiz(btn, correct) {
         btn.classList.add("wrong");
     }
 
-    // Submit review
     const card = quizDeck[quizIndex];
     fetch(`${BASE}/api/review/${card.id}`, {
         method: "POST",
@@ -282,12 +291,10 @@ function answerQuiz(btn, correct) {
         body: JSON.stringify({ correct: isCorrect })
     });
 
-    // Auto next after delay
     setTimeout(() => {
         quizIndex++;
-        // Re-fetch all cards for options pool
         fetch(BASE + "/api/review?limit=50").then(r => r.json()).then(allCards => {
-            if (allCards.length < 4) allCards = vocabList; // fallback
+            if (allCards.length < 4) allCards = vocabList;
             showQuizQuestion(allCards);
         });
     }, 1200);
@@ -312,6 +319,7 @@ function handleUpload(e) {
 
 async function processUpload(file) {
     document.getElementById("upload-loading").style.display = "block";
+    document.getElementById("upload-zone").style.display = "none";
     document.getElementById("ocr-preview").classList.remove("visible");
     document.getElementById("upload-loading-text").textContent = "Analyse IA en cours...";
 
@@ -323,7 +331,7 @@ async function processUpload(file) {
         const data = await res.json();
 
         document.getElementById("ocr-raw").value = data.debug_raw || data.raw_text;
-        let methodLabel = data.method === "ai" ? "Claude IA" : "OCR Tesseract (fallback)";
+        let methodLabel = data.method === "ai" ? "Claude IA" : "Fallback";
         if (data.pages > 1) methodLabel += ` (${data.pages} pages)`;
         document.getElementById("ocr-method").textContent = methodLabel;
         renderOcrEntries(data.entries);
@@ -332,6 +340,7 @@ async function processUpload(file) {
         toast("Erreur: " + err.message);
     }
     document.getElementById("upload-loading").style.display = "none";
+    document.getElementById("upload-zone").style.display = "";
 }
 
 let ocrEntries = [];
@@ -340,16 +349,17 @@ function renderOcrEntries(entries) {
     ocrEntries = entries;
     const container = document.getElementById("ocr-entries");
     if (!entries.length) {
-        container.innerHTML = `<p style="color:var(--text-muted)">Aucune paire detectee. Verifie le format du texte.</p>`;
+        container.innerHTML = `<p style="color:var(--text-muted);font-size:0.9rem;">Aucune paire detectee.</p>`;
         return;
     }
-    container.innerHTML = entries.map((e, i) => `
+    container.innerHTML = `<p style="color:var(--success);font-size:0.85rem;margin-bottom:0.6rem;font-weight:600;">${entries.length} mots detectes</p>` +
+        entries.map((e, i) => `
         <div class="ocr-entry">
             <input type="text" value="${esc(e.vietnamese)}" onchange="ocrEntries[${i}].vietnamese=this.value" placeholder="Vietnamien">
             <input type="text" value="${esc(e.french)}" onchange="ocrEntries[${i}].french=this.value" placeholder="Francais">
-            <input type="text" value="${esc(e.category || '')}" onchange="ocrEntries[${i}].category=this.value" placeholder="Categorie" style="max-width:120px;">
-            <button class="btn-icon" onclick="this.parentElement.remove();ocrEntries[${i}]=null;">
-                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            <input type="text" value="${esc(e.category || '')}" onchange="ocrEntries[${i}].category=this.value" placeholder="Categorie">
+            <button class="btn-icon" onclick="this.parentElement.remove();ocrEntries[${i}]=null;" style="width:32px;height:32px;">
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
             </button>
         </div>
     `).join("");
@@ -417,8 +427,8 @@ async function loadStats() {
     document.getElementById("stat-due").textContent = data.due_today;
 
     const renderList = (items, key) => items.length
-        ? items.map(i => `<div class="vocab-item"><div class="vocab-text"><span class="vocab-viet">${esc(i.vietnamese)}</span> <span class="vocab-french">${esc(i.french)}</span></div><span style="color:var(--text-muted)">${i[key]}x</span></div>`).join("")
-        : `<p style="color:var(--text-muted);padding:1rem;">Pas encore de donnees</p>`;
+        ? items.map(i => `<div class="vocab-item"><div class="vocab-text"><span class="vocab-viet">${esc(i.vietnamese)}</span> <span class="vocab-french">${esc(i.french)}</span></div><span style="color:var(--text-dim);font-size:0.85rem;font-weight:600;">${i[key]}x</span></div>`).join("")
+        : `<p style="color:var(--text-dim);padding:1rem;font-size:0.9rem;">Pas encore de donnees</p>`;
 
     document.getElementById("stat-top-correct").innerHTML = renderList(data.top_correct, "correct");
     document.getElementById("stat-top-incorrect").innerHTML = renderList(data.top_incorrect, "incorrect");

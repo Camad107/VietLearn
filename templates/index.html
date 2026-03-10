@@ -2,20 +2,28 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VietLearn - Apprends le Vietnamien</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>VietLearn</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="static/css/style.css">
 </head>
 <body>
 
 <nav class="nav">
     <div class="nav-brand">VietLearn</div>
-    <div class="nav-links">
-        <button class="active" onclick="showPage('vocab')">Vocabulaire</button>
-        <button onclick="showPage('flashcards')">Flashcards</button>
-        <button onclick="showPage('quiz')">Quiz</button>
-        <button onclick="showPage('upload')">Upload</button>
-        <button onclick="showPage('stats')">Stats</button>
+    <button class="nav-hamburger" onclick="toggleMenu()" aria-label="Menu">
+        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path id="hamburger-icon" d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+        <button class="active" onclick="showPage('vocab', this)">Vocabulaire</button>
+        <button onclick="showPage('flashcards', this)">Flashcards</button>
+        <button onclick="showPage('quiz', this)">Quiz</button>
+        <button onclick="showPage('upload', this)">Upload</button>
+        <button onclick="showPage('stats', this)">Stats</button>
     </div>
 </nav>
 
@@ -49,14 +57,16 @@
         </div>
 
         <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-                <h2 style="margin:0">Ma liste</h2>
-                <div style="display:flex;gap:0.5rem;">
-                    <select id="filter-category" onchange="loadVocab()" style="width:auto;">
+            <div class="card-header">
+                <h2>Ma liste</h2>
+                <div class="card-header-actions">
+                    <select id="filter-category" onchange="loadVocab()">
                         <option value="">Toutes categories</option>
                     </select>
-                    <input type="text" id="search-input" placeholder="Rechercher..."
-                           oninput="loadVocab()" style="width:200px;">
+                    <div class="search-bar">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <input type="text" id="search-input" placeholder="Rechercher..." oninput="loadVocab()">
+                    </div>
                 </div>
             </div>
             <div id="vocab-list"></div>
@@ -66,11 +76,13 @@
     <!-- ==================== FLASHCARDS ==================== -->
     <div id="page-flashcards" class="page">
         <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-                <h2 style="margin:0">Flashcards</h2>
-                <select id="flash-category" onchange="startFlashcards()" style="width:auto;">
-                    <option value="">Toutes categories</option>
-                </select>
+            <div class="card-header">
+                <h2>Flashcards</h2>
+                <div class="card-header-actions">
+                    <select id="flash-category" onchange="startFlashcards()">
+                        <option value="">Toutes categories</option>
+                    </select>
+                </div>
             </div>
 
             <div id="flashcard-area">
@@ -79,7 +91,7 @@
                     <div class="flashcard" id="flashcard" onclick="flipCard()">
                         <div class="flashcard-face flashcard-front">
                             <div class="word" id="flash-front-word"></div>
-                            <div class="hint">Clique pour retourner</div>
+                            <div class="hint">Touche pour retourner</div>
                         </div>
                         <div class="flashcard-face flashcard-back">
                             <div class="word" id="flash-back-word"></div>
@@ -89,7 +101,7 @@
                 </div>
                 <div class="flashcard-controls">
                     <button class="btn btn-danger" onclick="reviewCard(false)">Je ne sais pas</button>
-                    <button class="btn btn-icon" onclick="speakVietnamese()" title="Ecouter">
+                    <button class="btn-icon" onclick="speakVietnamese()" title="Ecouter">
                         <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
                     </button>
                     <button class="btn btn-success" onclick="reviewCard(true)">Je sais !</button>
@@ -105,14 +117,14 @@
     <!-- ==================== QUIZ ==================== -->
     <div id="page-quiz" class="page">
         <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-                <h2 style="margin:0">Quiz</h2>
-                <div style="display:flex;gap:0.5rem;align-items:center;">
-                    <select id="quiz-direction" onchange="startQuiz()" style="width:auto;">
-                        <option value="viet-to-fr">Viet → Francais</option>
-                        <option value="fr-to-viet">Francais → Viet</option>
+            <div class="card-header">
+                <h2>Quiz</h2>
+                <div class="card-header-actions">
+                    <select id="quiz-direction" onchange="startQuiz()">
+                        <option value="viet-to-fr">Viet &rarr; FR</option>
+                        <option value="fr-to-viet">FR &rarr; Viet</option>
                     </select>
-                    <select id="quiz-category" onchange="startQuiz()" style="width:auto;">
+                    <select id="quiz-category" onchange="startQuiz()">
                         <option value="">Toutes categories</option>
                     </select>
                 </div>
@@ -122,8 +134,8 @@
                 <div class="flashcard-progress" id="quiz-progress"></div>
                 <div class="quiz-question" id="quiz-question"></div>
                 <div class="quiz-options" id="quiz-options"></div>
-                <div style="text-align:center;margin-top:1.5rem;">
-                    <button class="btn btn-icon" onclick="speakVietnamese()" title="Ecouter" id="quiz-speak-btn">
+                <div style="text-align:center;margin-top:1.2rem;">
+                    <button class="btn-icon" onclick="speakVietnamese()" title="Ecouter" id="quiz-speak-btn">
                         <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
                     </button>
                 </div>
@@ -140,34 +152,32 @@
         </div>
     </div>
 
-    <!-- ==================== UPLOAD / OCR ==================== -->
+    <!-- ==================== UPLOAD ==================== -->
     <div id="page-upload" class="page">
         <div class="card">
             <h2>Importer du vocabulaire</h2>
-            <p style="color:var(--text-muted);margin-bottom:1rem;font-size:0.9rem;">
-                Upload une photo, un PDF, un Word ou tout autre document de ta lecon.
-                L'IA analyse le contenu et extrait tout le vocabulaire automatiquement.
+            <p style="color:var(--text-muted);margin-bottom:1rem;font-size:0.85rem;">
+                Upload une photo, PDF, Word ou tout document de ta lecon.
+                L'IA analyse et extrait tout le vocabulaire automatiquement.
             </p>
             <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
                 <input type="file" id="file-input" accept="image/*,.pdf,.doc,.docx,.odt,.rtf,.ppt,.pptx,.xls,.xlsx" onchange="handleUpload(event)">
-                <div class="icon" style="font-size:2rem;">&#x1F4F7; &#x1F4C4;</div>
+                <div class="icon">&#x1F4C1;</div>
                 <p>Clique ou glisse un fichier ici</p>
-                <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">
-                    Images, PDF, Word, Excel, PowerPoint, ODT (max 20 MB)
-                </p>
+                <p class="hint">Images, PDF, Word, Excel, PowerPoint, ODT (max 20 MB)</p>
             </div>
 
             <div id="upload-loading" style="display:none;text-align:center;padding:2rem;">
                 <div class="loading"></div>
-                <p id="upload-loading-text" style="margin-top:1rem;color:var(--text-muted);">Analyse IA en cours...</p>
+                <p id="upload-loading-text" style="margin-top:1rem;color:var(--text-muted);font-size:0.85rem;">Analyse IA en cours...</p>
             </div>
 
             <div class="ocr-preview" id="ocr-preview">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <h2>Resultat</h2>
-                    <span id="ocr-method" style="font-size:0.8rem;background:var(--primary);color:white;padding:0.2rem 0.6rem;border-radius:99px;"></span>
+                <div class="ocr-header">
+                    <h2 style="margin:0">Resultat</h2>
+                    <span class="badge" id="ocr-method"></span>
                 </div>
-                <textarea id="ocr-raw" rows="3" readonly style="margin:0.5rem 0 1rem;"></textarea>
+                <textarea id="ocr-raw" rows="3" readonly style="margin:0.5rem 0 1rem;font-size:0.8rem;"></textarea>
 
                 <h2>Vocabulaire detecte</h2>
                 <div id="ocr-entries"></div>
@@ -180,12 +190,11 @@
 
         <div class="card">
             <h2>Import manuel (texte)</h2>
-            <p style="color:var(--text-muted);margin-bottom:1rem;font-size:0.9rem;">
-                Colle du texte avec un format : <code>vietnamien = francais</code> ou
-                <code>vietnamien : francais</code> (un par ligne)
+            <p style="color:var(--text-muted);margin-bottom:0.8rem;font-size:0.85rem;">
+                Colle du texte : <code style="background:var(--bg-input);padding:0.1rem 0.4rem;border-radius:4px;font-size:0.8rem;">vietnamien = francais</code> (un par ligne)
             </p>
-            <textarea id="manual-text" placeholder="xin chao = bonjour&#10;cam on = merci&#10;tam biet = au revoir" rows="6"></textarea>
-            <button class="btn btn-primary" style="margin-top:0.5rem;" onclick="importManualText()">Importer</button>
+            <textarea id="manual-text" placeholder="xin chao = bonjour&#10;cam on = merci&#10;tam biet = au revoir" rows="5"></textarea>
+            <button class="btn btn-primary" style="margin-top:0.6rem;" onclick="importManualText()">Importer</button>
         </div>
     </div>
 
@@ -193,10 +202,10 @@
     <div id="page-stats" class="page">
         <div class="card">
             <h2>Statistiques</h2>
-            <div class="stat-grid" id="stat-grid">
+            <div class="stat-grid">
                 <div class="stat-box">
                     <div class="number" id="stat-total">0</div>
-                    <div class="label">Mots total</div>
+                    <div class="label">Total</div>
                 </div>
                 <div class="stat-box">
                     <div class="number" id="stat-reviewed">0</div>
@@ -204,7 +213,7 @@
                 </div>
                 <div class="stat-box">
                     <div class="number" id="stat-due">0</div>
-                    <div class="label">A reviser</div>
+                    <div class="label">A revoir</div>
                 </div>
             </div>
         </div>
