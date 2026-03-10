@@ -132,8 +132,8 @@ async def bulk_add(request: Request):
 @app.post("/api/ocr")
 async def ocr_upload(file: UploadFile = File(...)):
     contents = await file.read()
-    if len(contents) > 10 * 1024 * 1024:
-        raise HTTPException(400, "File too large (max 10MB)")
+    if len(contents) > 20 * 1024 * 1024:
+        raise HTTPException(400, "File too large (max 20MB)")
 
     result = extract_vocab_with_ai(contents, file.filename)
 
@@ -141,6 +141,7 @@ async def ocr_upload(file: UploadFile = File(...)):
         "raw_text": result.get("description", ""),
         "entries": result.get("entries", []),
         "method": result.get("method", "unknown"),
+        "pages": result.get("pages", 0),
     }
 
 

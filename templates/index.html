@@ -145,15 +145,15 @@
         <div class="card">
             <h2>Importer du vocabulaire</h2>
             <p style="color:var(--text-muted);margin-bottom:1rem;font-size:0.9rem;">
-                Upload une photo de ta liste de vocabulaire. L'OCR va extraire le texte
-                et detecter les paires vietnamien/francais.
+                Upload une photo ou un PDF de ta lecon. L'IA analyse le contenu
+                et extrait tout le vocabulaire et les phrases automatiquement.
             </p>
             <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
-                <input type="file" id="file-input" accept="image/*" onchange="handleUpload(event)">
-                <div class="icon" style="font-size:2rem;">&#x1F4F7;</div>
-                <p>Clique ou glisse une image ici</p>
+                <input type="file" id="file-input" accept="image/*,.pdf" onchange="handleUpload(event)">
+                <div class="icon" style="font-size:2rem;">&#x1F4F7; &#x1F4C4;</div>
+                <p>Clique ou glisse une image ou un PDF ici</p>
                 <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">
-                    Formats: JPG, PNG, BMP (max 10 MB)
+                    Formats: JPG, PNG, PDF (max 20 MB)
                 </p>
             </div>
 

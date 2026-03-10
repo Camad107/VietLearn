@@ -323,7 +323,9 @@ async function processUpload(file) {
         const data = await res.json();
 
         document.getElementById("ocr-raw").value = data.raw_text;
-        document.getElementById("ocr-method").textContent = data.method === "ai" ? "Claude IA" : "OCR Tesseract (fallback)";
+        let methodLabel = data.method === "ai" ? "Claude IA" : "OCR Tesseract (fallback)";
+        if (data.pages > 1) methodLabel += ` (${data.pages} pages)`;
+        document.getElementById("ocr-method").textContent = methodLabel;
         renderOcrEntries(data.entries);
         document.getElementById("ocr-preview").classList.add("visible");
     } catch (err) {
