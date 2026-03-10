@@ -30,12 +30,17 @@ Si tu vois des tons ou de la phonetique, inclus-les dans le champ vietnamese.
 Extrais TOUT ce qui est pertinent pour apprendre le vietnamien."""
 
 
+DOCUMENT_EXTENSIONS = {".doc", ".docx", ".odt", ".rtf", ".ppt", ".pptx", ".xls", ".xlsx"}
+
+
 def extract_vocab_with_ai(file_bytes: bytes, filename: str) -> dict:
-    """Analyze an image or PDF and extract Vietnamese vocabulary using Claude."""
+    """Analyze an image, PDF or document and extract Vietnamese vocabulary."""
     suffix = os.path.splitext(filename)[1].lower() or ".png"
 
     if suffix == ".pdf":
         return _process_pdf(file_bytes)
+    elif suffix in DOCUMENT_EXTENSIONS:
+        return _process_document(file_bytes, suffix)
     else:
         return _process_image(file_bytes, suffix)
 
@@ -50,6 +55,46 @@ def _process_image(image_bytes: bytes, suffix: str) -> dict:
         return _call_claude([tmp_path])
     finally:
         _safe_delete(tmp_path)
+
+
+def _process_document(file_bytes: bytes, suffix: str) -> dict:
+    """Convert doc/docx/odt/etc to PDF via LibreOffice, then process as PDF."""
+    tmpdir = tempfile.mkdtemp(prefix="vietlearn_doc_")
+    doc_path = os.path.join(tmpdir, "input" + suffix)
+
+    with open(doc_path, "wb") as f:
+        f.write(file_bytes)
+
+    try:
+        subprocess.run(
+            ["libreoffice", "--headless", "--convert-to", "pdf",
+             "--outdir", tmpdir, doc_path],
+            capture_output=True, timeout=60,
+            env={**os.environ, "HOME": tmpdir}
+        )
+
+        pdf_path = os.path.join(tmpdir, "input.pdf")
+        if not os.path.exists(pdf_path):
+            return {
+                "raw_text": "",
+                "entries": [],
+                "description": f"Echec de conversion {suffix} → PDF",
+                "method": "error",
+                "pages": 0,
+            }
+
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+
+        return _process_pdf(pdf_bytes)
+
+    finally:
+        for f in globmod.glob(os.path.join(tmpdir, "*")):
+            _safe_delete(f)
+        try:
+            os.rmdir(tmpdir)
+        except OSError:
+            pass
 
 
 def _process_pdf(pdf_bytes: bytes) -> dict:
