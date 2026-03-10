@@ -60,6 +60,10 @@
             <div class="card-header">
                 <h2>Ma liste</h2>
                 <div class="card-header-actions">
+                    <select id="vocab-direction" onchange="renderVocabList()">
+                        <option value="viet-fr">Viet &rarr; FR</option>
+                        <option value="fr-viet">FR &rarr; Viet</option>
+                    </select>
                     <select id="filter-category" onchange="loadVocab()">
                         <option value="">Toutes categories</option>
                     </select>

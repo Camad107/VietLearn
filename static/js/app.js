@@ -83,13 +83,17 @@ function renderVocabList() {
         container.innerHTML = '<div class="empty-state"><div class="icon">&#x1F4D6;</div><p>Aucun vocabulaire. Ajoute tes premiers mots !</p></div>';
         return;
     }
+    const dir = document.getElementById("vocab-direction").value;
+    const isVietFr = dir === "viet-fr";
     container.innerHTML = vocabList.map(v => {
         const vietAttr = escAttr(v.vietnamese);
+        const top = isVietFr ? v.vietnamese : v.french;
+        const bottom = isVietFr ? v.french : v.vietnamese;
         return `
         <div class="vocab-item">
             <div class="vocab-text">
-                <div class="vocab-viet">${esc(v.vietnamese)}</div>
-                <div class="vocab-french">${esc(v.french)}</div>
+                <div class="vocab-viet">${esc(top)}</div>
+                <div class="vocab-french">${esc(bottom)}</div>
             </div>
             ${v.category ? `<span class="vocab-category">${esc(v.category)}</span>` : ""}
             <div class="vocab-actions">
